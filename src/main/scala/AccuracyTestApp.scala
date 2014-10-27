@@ -55,16 +55,16 @@ object AccuracyTestApp {
         .map(_.swap).sortByKey().collect().map { case (count, closestIdx) =>
       val closestCluster = clusters(closestIdx)
       val vector = closestCluster.center
-      s"  Count: ${count}, Depth: ${closestCluster.depth()}, Variance: ${closestCluster.getVariance().get}, Seed Vector: ${vector.toArray.take(3).mkString(",")}..."
+      s"  Count: ${count}, Depth: ${closestCluster.getDepth()}, Variance: ${closestCluster.getVariance().get}, Seed Vector: ${vector.toArray.take(3).mkString(",")}..."
     }
 
-//    val seedVectors = labeledData.map { case (seed, v, sv) => seed}.distinct().collect().sorted
-//    val result2 = seedVectors.map { seed =>
-//      val rdd = labeledData.filter { case (s, v, sv) => seed == s}.map { case (s, v, sv) => v}
-//      val cluster = ClusterTree.fromRDD(rdd)
-//      cluster.updateStats()
-//      s"  Count: ${cluster.getDataSize()}, Depth: ${cluster.depth()}, Variance: ${cluster.getVariance().get}, Seed Vector: ${cluster.center.toArray.take(3).mkString(",")}..."
-//    }
+    //    val seedVectors = labeledData.map { case (seed, v, sv) => seed}.distinct().collect().sorted
+    //    val result2 = seedVectors.map { seed =>
+    //      val rdd = labeledData.filter { case (s, v, sv) => seed == s}.map { case (s, v, sv) => v}
+    //      val cluster = ClusterTree.fromRDD(rdd)
+    //      cluster.updateStats()
+    //      s"  Count: ${cluster.getDataSize()}, Depth: ${cluster.depth()}, Variance: ${cluster.getVariance().get}, Seed Vector: ${cluster.center.toArray.take(3).mkString(",")}..."
+    //    }
 
     val result3 = labeledData.map { case (seed, vector, seedVector) => (seedVector, 1)}.reduceByKey(_ + _)
         .map(_.swap).sortByKey().collect().map { case (count, vector) =>
@@ -83,10 +83,21 @@ object AccuracyTestApp {
     println(s"Mean Standard Deviation: ${Math.sqrt(meanVariance)}")
     println(s"== Result Vectors and Their Rows: ")
     result1.foreach(println)
-//    println(s"== Original Vectors:")
-//    result2.foreach(println)
+    //    println(s"== Original Vectors:")
+    //    result2.foreach(println)
     println(s"== Seed Vectors and Their Rows: ")
     result3.foreach(println)
+
+    val nodes = model.clusterTree.toSeq().sortWith { case (n1, n2) => n1.getDepth() < n2.getDepth()}
+    nodes.foreach { node =>
+      println(s"hashCode:${node.hashCode()}, " +
+          s"Depth:${node.getDepth()}, " +
+          s"Count:${node.getDataSize()}, " +
+          s"Variance:${node.getVariance()}, " +
+          s"Children:${node.getChildren().map(_.hashCode())}" +
+          s"Center:${node.center}"
+      )
+    }
   }
 
   def generateData(sc: SparkContext,

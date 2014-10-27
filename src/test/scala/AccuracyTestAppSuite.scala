@@ -22,8 +22,8 @@ class AccuracyTestAppSuite extends FunSuite {
   test("main") {
     val master = "local"
     val maxCores = 1
-    val numClusters = 10
-    val dimension = 5
+    val numClusters = 8
+    val dimension = 2
     val numPartitions = 4
 
     val args = Array(master, maxCores, numClusters, dimension, numPartitions).map(_.toString)

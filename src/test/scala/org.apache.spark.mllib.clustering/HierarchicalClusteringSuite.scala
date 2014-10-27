@@ -65,7 +65,7 @@ class HierarchicalClusteringModelSuite
 
     val conf = new HierarchicalClusteringConf().setNumClusters(10).setRandomSeed(1)
     app = new HierarchicalClustering(conf)
-    model = app.train(data)
+    model = app.run(data)
   }
 
   test("should get the array of ClusterTree") {
@@ -109,7 +109,7 @@ class HierarchicalClusteringSuite extends FunSuite with BeforeAndAfterEach with 
   test("train") {
     val conf = new HierarchicalClusteringConf().setNumClusters(3)
     val app = new HierarchicalClustering(conf)
-    val model = app.train(data)
+    val model = app.run(data)
     assert(model.clusterTree.toSeq().filter(_.isLeaf()).size === 3)
     model.clusterTree.toSeq().foreach { tree: ClusterTree => assert(tree.getVariance() != None)}
   }
@@ -119,8 +119,8 @@ class HierarchicalClusteringSuite extends FunSuite with BeforeAndAfterEach with 
         .map(i => Vectors.dense(i + Math.random, i + Math.random)), 2)
     val conf = new HierarchicalClusteringConf().setNumClusters(10)
     val app = new HierarchicalClustering(conf)
-    val model = app.train(data)
-    assert(model.clusterTree.treeSize() === 10)
+    val model = app.run(data)
+    assert(model.clusterTree.getTreeSize() === 10)
     model.clusterTree.toSeq().foreach { tree: ClusterTree => assert(tree.getVariance() != None)}
   }
 
@@ -131,8 +131,8 @@ class HierarchicalClusteringSuite extends FunSuite with BeforeAndAfterEach with 
     // but the number of given clusters is 10
     val conf = new HierarchicalClusteringConf().setNumClusters(10)
     val app = new HierarchicalClustering(conf)
-    val model = app.train(data)
-    assert(model.clusterTree.treeSize() === 5)
+    val model = app.run(data)
+    assert(model.clusterTree.getTreeSize() === 5)
     model.clusterTree.toSeq().foreach { tree: ClusterTree => assert(tree.getVariance() != None)}
   }
 
@@ -140,8 +140,8 @@ class HierarchicalClusteringSuite extends FunSuite with BeforeAndAfterEach with 
     val data = sc.parallelize((1 to 100).map(i => Vectors.dense(0.0, 0.0)), 1)
     val conf = new HierarchicalClusteringConf().setNumClusters(5)
     val app = new HierarchicalClustering(conf)
-    val model = app.train(data)
-    assert(model.clusterTree.treeSize() === 1)
+    val model = app.run(data)
+    assert(model.clusterTree.getTreeSize() === 1)
   }
 
   test("parameter validation") {
@@ -149,7 +149,7 @@ class HierarchicalClusteringSuite extends FunSuite with BeforeAndAfterEach with 
     intercept[IllegalArgumentException] {
       val conf = new HierarchicalClusteringConf().setNumClusters(101)
       val app = new HierarchicalClustering(conf)
-      app.train(data)
+      app.run(data)
     }
   }
 
@@ -220,17 +220,17 @@ class ClusterTreeSuite extends FunSuite with LocalSparkContext with SampleData {
     root.insert(child2)
     child2.insert(child21)
     child2.insert(child22)
-    assert(root.treeSize() === 3)
-    assert(child1.treeSize() === 1)
-    assert(child2.treeSize() === 2)
-    assert(child21.treeSize() === 1)
-    assert(child22.treeSize() === 1)
+    assert(root.getTreeSize() === 3)
+    assert(child1.getTreeSize() === 1)
+    assert(child2.getTreeSize() === 2)
+    assert(child21.getTreeSize() === 1)
+    assert(child22.getTreeSize() === 1)
 
-    assert(root.depth() === 0)
-    assert(child1.depth() === 1)
-    assert(child2.depth() === 1)
-    assert(child21.depth() === 2)
-    assert(child22.depth() === 2)
+    assert(root.getDepth() === 0)
+    assert(child1.getDepth() === 1)
+    assert(child2.getDepth() === 1)
+    assert(child21.getDepth() === 2)
+    assert(child22.getDepth() === 2)
   }
 }
 

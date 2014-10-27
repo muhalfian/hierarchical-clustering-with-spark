@@ -14,9 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.spark.mllib.clustering
 
 import breeze.linalg.{DenseVector => BDV, Vector => BV, norm => breezeNorm}
+import org.apache.spark.Logging
 import org.apache.spark.SparkContext._
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.rdd.RDD
@@ -39,7 +41,14 @@ class HierarchicalClusteringConf(
   private var randomSeed: Int,
   private[mllib] var randomRange: Double) extends Serializable {
 
-  def this() = this(100, 20, 20, 10E-6, 1, 0.1)
+  def this() = this(20, 20, 5, 10E-6, 1, 0.1)
+
+  override def toString(): String = {
+    Array(
+      s"numClusters:${numClusters}", s"subIterations:${subIterations}", s"numRetries:${numRetries}",
+      s"epsilon:${epsilon}", s"randomSeed:${randomSeed}", s"randomRange:${randomRange}"
+    ).mkString(", ")
+  }
 
   def setNumClusters(numClusters: Int): this.type = {
     this.numClusters = numClusters
@@ -88,7 +97,8 @@ class HierarchicalClusteringConf(
  *
  * @param conf the configuration class for the hierarchical clustering
  */
-class HierarchicalClustering(val conf: HierarchicalClusteringConf) extends Serializable {
+class HierarchicalClustering(val conf: HierarchicalClusteringConf)
+    extends Serializable with Logging {
 
   /**
    * Constructs with the default configuration
@@ -101,8 +111,9 @@ class HierarchicalClustering(val conf: HierarchicalClusteringConf) extends Seria
    * @param data training points
    * @return a model for hierarchical clustering
    */
-  def train(data: RDD[Vector]): HierarchicalClusteringModel = {
+  def run(data: RDD[Vector]): HierarchicalClusteringModel = {
     validateData(data)
+    logInfo(s"Run with ${conf}")
 
     val startTime = System.currentTimeMillis() // to measure the execution time
     val clusterTree = ClusterTree.fromRDD(data) // make the root node
@@ -118,8 +129,9 @@ class HierarchicalClustering(val conf: HierarchicalClusteringConf) extends Seria
     //   3. The total variance of all clusters increases, when a cluster is splitted
     var totalVariance = Double.MaxValue
     var newTotalVariance = model.clusterTree.getVariance().get
+    var step = 1
     while (node != None
-        && model.clusterTree.treeSize() < this.conf.getNumClusters
+        && model.clusterTree.getTreeSize() < this.conf.getNumClusters
         && totalVariance >= newTotalVariance) {
 
       // split some times in order not to be wrong clustering result
@@ -129,12 +141,21 @@ class HierarchicalClustering(val conf: HierarchicalClusteringConf) extends Seria
         if (isMerged == false && isSingleCluster == false) {
           var subNodes = split(node.get).map(subNode => statsUpdater(subNode))
           // it seems that there is no splittable node
-          if (subNodes.size == 1) isSingleCluster = false
+          if (subNodes.size == 1) {
+            isSingleCluster = false
+          }
           // add the sub nodes in to the tree
           // if the sum of variance of sub nodes is greater than that of pre-splitted node
           if (node.get.getVariance().get > subNodes.map(_.getVariance().get).sum) {
+            // insert the nodes to the tree
             node.get.insert(subNodes.toList)
+            // calculate the local dendrogram height
+            val dist = breezeNorm(subNodes(0).center.toBreeze - subNodes(1).center.toBreeze, 2)
+            node.get.height = Some(dist)
+            // cached data is unnecessary because its children nodes are cached
+            node.get.data.unpersist()
             isMerged = true
+            logInfo(s"the number of cluster is ${model.clusterTree.getTreeSize()} at step ${step}")
           }
         }
       }
@@ -144,6 +165,7 @@ class HierarchicalClustering(val conf: HierarchicalClusteringConf) extends Seria
       totalVariance = newTotalVariance
       newTotalVariance = model.clusterTree.toSeq().filter(_.isLeaf()).map(_.getVariance().get).sum
       node = nextNode(model.clusterTree)
+      step += 1
     }
 
     model.isTrained = true
@@ -154,12 +176,8 @@ class HierarchicalClustering(val conf: HierarchicalClusteringConf) extends Seria
   /**
    * validate the given data to train
    */
-  private[clustering] def validateData(data: RDD[Vector]) {
-    conf match {
-      case conf if conf.getNumClusters() > data.count() =>
-        throw new IllegalArgumentException("# clusters must be less than # input data records")
-      case _ =>
-    }
+  private def validateData(data: RDD[Vector]) {
+    require(conf.getNumClusters() <= data.count(), "# clusters must be less than # data rows")
   }
 
   /**
@@ -191,9 +209,14 @@ class HierarchicalClustering(val conf: HierarchicalClusteringConf) extends Seria
    * @return an array of ClusterTree. its size is generally 2, but its size can be 1
    */
   private def split(clusterTree: ClusterTree): Array[ClusterTree] = {
+    val startTime = System.currentTimeMillis()
     val data = clusterTree.data
+    val sc = data.sparkContext
     var centers = takeInitCenters(clusterTree.center)
-    var finder: ClosestCenterFinder = new EuclideanClosestCenterFinder(centers)
+
+    // TODO Supports distance metrics other Euclidean distance metric
+    val metric = (bv1: BV[Double], bv2: BV[Double]) => breezeNorm(bv1 - bv2, 2.0)
+    sc.broadcast(metric)
 
     // If the following conditions are satisfied, the iteration is stopped
     //   1. the relative error is less than that of configuration
@@ -204,13 +227,15 @@ class HierarchicalClustering(val conf: HierarchicalClusteringConf) extends Seria
     while (error > conf.getEpsilon()
         && numIter < conf.getSubIterations()
         && centers.size > 1) {
+
+      val startTimeOfIter = System.currentTimeMillis()
       // finds the closest center of each point
-      data.sparkContext.broadcast(finder)
+      sc.broadcast(centers)
       val newCenters = data.mapPartitions { iter =>
         // calculate the accumulation of the all point in a partition and count the rows
         val map = scala.collection.mutable.Map.empty[Int, (BV[Double], Int)]
         iter.foreach { point =>
-          val idx = finder(point)
+          val idx = ClusterTree.findClosestCenter(metric)(centers)(point)
           val (sumBV, n) = map.get(idx).getOrElse((BV.zeros[Double](point.size), 0))
           map(idx) = (sumBV + point, n + 1)
         }
@@ -224,17 +249,20 @@ class HierarchicalClustering(val conf: HierarchicalClusteringConf) extends Seria
 
       val normSum = centers.map(v => breezeNorm(v, 2.0)).sum
       val newNormSum = newCenters.map(v => breezeNorm(v, 2.0)).sum
-      error = Math.abs((normSum - newNormSum) / normSum)
+      error = math.abs((normSum - newNormSum) / normSum)
       centers = newCenters.toArray
       numIter += 1
-      finder = new EuclideanClosestCenterFinder(centers)
+
+      logInfo(s"${numIter} iterations is finished" +
+          s" for ${System.currentTimeMillis() - startTimeOfIter}" +
+          s" at ${getClass}.split")
     }
 
     val vectors = centers.map(center => Vectors.fromBreeze(center))
     val nodes = centers.size match {
       case 1 => Array(new ClusterTree(vectors(0), data))
       case 2 => {
-        val closest = data.map(point => (finder(point), point))
+        val closest = data.map(p => (ClusterTree.findClosestCenter(metric)(centers)(p), p))
         centers.zipWithIndex.map { case (center, i) =>
           val subData = closest.filter(_._1 == i).map(_._2)
           subData.cache
@@ -243,6 +271,9 @@ class HierarchicalClustering(val conf: HierarchicalClusteringConf) extends Seria
       }
       case _ => throw new RuntimeException(s"something wrong with # centers:${centers.size}")
     }
+    logInfo(s"${this.getClass.getSimpleName}.split end" +
+        s" with total iterations" +
+        s" for ${System.currentTimeMillis() - startTime}")
     nodes
   }
 }
@@ -268,61 +299,10 @@ object HierarchicalClustering {
     val conf = new HierarchicalClusteringConf()
         .setNumClusters(numClusters)
     val app = new HierarchicalClustering(conf)
-    app.train(data)
+    app.run(data)
   }
 }
 
-/**
- * this class is used for the model of the hierarchical clustering
- *
- * @param clusterTree a cluster as a tree node
- * @param trainTime the milliseconds for executing a training
- * @param predictTime the milliseconds for executing a prediction
- * @param isTrained if the model has been trained, the flag is true
- * @param clusters the clusters as the result of the training
- */
-class HierarchicalClusteringModel private (
-  val clusterTree: ClusterTree,
-  var trainTime: Int,
-  var predictTime: Int,
-  var isTrained: Boolean,
-  private var clusters: Option[Array[ClusterTree]]) extends Serializable {
-
-  def this(clusterTree: ClusterTree) = this(clusterTree, 0, 0, false, None)
-
-  /**
-   * Gets the centers
-   * @return the centers of clusters
-   */
-  def getClusters(): Array[ClusterTree] = {
-    if (clusters == None) {
-      val clusters = this.clusterTree.toSeq().filter(_.isLeaf())
-          .sortWith((a, b) => a.depth() < b.depth()).toArray
-      this.clusters = Some(clusters)
-    }
-    this.clusters.get
-  }
-
-  /**
-   * Predicts the closest cluster of each point
-   * @param data the data to predict
-   * @return predicted data
-   */
-  def predict(data: RDD[Vector]): RDD[(Int, Vector)] = {
-    val startTime = System.currentTimeMillis() // to measure the execution time
-
-    val centers = getClusters().map(_.center.toBreeze)
-    val finder = new EuclideanClosestCenterFinder(centers)
-    data.sparkContext.broadcast(centers)
-    data.sparkContext.broadcast(finder)
-    val predicted = data.map { point =>
-      val closestIdx = finder(point.toBreeze)
-      (closestIdx, point)
-    }
-    this.predictTime = (System.currentTimeMillis() - startTime).toInt
-    predicted
-  }
-}
 
 /**
  * A cluster as a tree node which can have its sub nodes
@@ -334,9 +314,11 @@ class HierarchicalClusteringModel private (
  * @param children the sub node(s) of the cluster
  * @param parent the parent node of the cluster
  */
+private[mllib]
 class ClusterTree(
   val center: Vector,
   private[mllib] val data: RDD[BV[Double]],
+  private[mllib] var height: Option[Double],
   private[mllib] var variance: Option[Double],
   private[mllib] var dataSize: Option[Long],
   private[mllib] var children: List[ClusterTree],
@@ -344,11 +326,12 @@ class ClusterTree(
   private[mllib] var isVisited: Boolean) extends Serializable {
 
   def this(center: Vector, data: RDD[BV[Double]]) =
-    this(center, data, None, None, List.empty[ClusterTree], None, false)
+    this(center, data, None, None, None, List.empty[ClusterTree], None, false)
 
   override def toString(): String = {
     val elements = Array(
       s"hashCode:${this.hashCode()}",
+      s"depth:${this.getDepth()}",
       s"dataSize:${this.dataSize.get}",
       s"variance:${this.variance.get}",
       s"parent:${this.parent.hashCode()}",
@@ -358,6 +341,23 @@ class ClusterTree(
     )
     elements.mkString(", ")
   }
+
+  /**
+   * Inserts sub nodes as its children
+   *
+   * @param children inserted sub nodes
+   */
+  def insert(children: List[ClusterTree]): Unit = {
+    this.children = this.children ++ children
+    children.foreach(child => child.parent = Some(this))
+  }
+
+  /**
+   * Inserts a sub node as its child
+   *
+   * @param child inserted sub node
+   */
+  def insert(child: ClusterTree): Unit = insert(List(child))
 
   /**
    * Converts the tree into Seq class
@@ -373,56 +373,82 @@ class ClusterTree(
   }
 
   /**
-   * Gets the depth of the cluster in the tree
-   *
-   * @return the depth
+   * Gets the all clusters which are leaves in the cluster tree
+   * @return the Seq of the clusters
    */
-  def depth(): Int = {
-    this.parent match {
-      case None => 0
-      case _ => 1 + this.parent.get.depth()
+  def getClusters(): Seq[ClusterTree] = {
+    toSeq().filter(_.isLeaf()).sortWith { case (a, b) =>
+      a.getDepth() < b.getDepth() &&
+          breezeNorm(a.center.toBreeze, 2) < breezeNorm(b.center.toBreeze, 2)
     }
   }
 
   /**
-   * Inserts sub nodes as its children
+   * Gets the depth of the cluster in the tree
    *
-   * @param children inserted sub nodes
+   * @return the depth
    */
-  def insert(children: List[ClusterTree]): Unit = {
-    this.children = this.children ++ children
-    children.foreach(child => child.setParent(Some(this)))
+  def getDepth(): Int = {
+    this.parent match {
+      case None => 0
+      case _ => 1 + this.parent.get.getDepth()
+    }
   }
 
   /**
-   * Inserts a sub node as its child
+   * Gets the dendrogram height of the cluster at the cluster tree
    *
-   * @param child inserted sub node
+   * @return the dendrogram height
    */
-  def insert(child: ClusterTree): Unit = insert(List(child))
+  def getHeight(): Double = {
+    this.children.size match {
+      case 0 => 0.0
+      case _ => this.height.get + this.children.map(_.getHeight()).max
+    }
+  }
+
+  /**
+   * Assigns the closest cluster with a vector
+   * @param metric distance metric
+   * @param v the vector you want to assign to
+   * @return the closest cluster
+   */
+  private[mllib]
+  def assignCluster(metric: Function2[BV[Double], BV[Double], Double])(v: Vector): ClusterTree = {
+    this.children.size match {
+      case 0 => this
+      case 2 => {
+        val distances = this.children.map(tree => metric(tree.center.toBreeze, v.toBreeze))
+        val minIndex = distances.indexOf(distances.min)
+        this.children(minIndex).assignCluster(metric)(v)
+      }
+      case _ =>
+        throw new UnsupportedOperationException(s"something wrong with # nodes, ${children.size}")
+    }
+  }
+
+  /**
+   * Assigns the closest cluster index of the clusters with a vector
+   * @param metric distance metric
+   * @param vector the vector you want to assign to
+   * @return the closest cluster index of the all clusters
+   */
+  private[mllib]
+  def assignClusterIndex(metric: Function2[BV[Double], BV[Double], Double])(vector: Vector): Int = {
+    val assignedTree = this.assignCluster(metric)(vector)
+    this.getClusters().indexOf(assignedTree)
+  }
 
   /**
    * Gets the number of the clusters in the tree. The clusters are only leaves
    *
    * @return the number of the clusters in the tree
    */
-  def treeSize(): Int = this.toSeq().filter(_.isLeaf()).size
-
-  private[clustering] def setVariance(variance: Option[Double]): this.type = {
-    this.variance = variance
-    this
-  }
+  def getTreeSize(): Int = this.toSeq().filter(_.isLeaf()).size
 
   def getVariance(): Option[Double] = this.variance
 
-  private[clustering] def setDataSize(dataSize: Option[Long]): this.type = {
-    this.dataSize = dataSize
-    this
-  }
-
   def getDataSize(): Option[Long] = this.dataSize
-
-  private[clustering] def setParent(parent: Option[ClusterTree]) = this.parent = parent
 
   def getParent(): Option[ClusterTree] = this.parent
 
@@ -453,7 +479,7 @@ object ClusterTree {
    */
   def fromRDD(data: RDD[Vector]): ClusterTree = {
     val breezeData = data.map(_.toBreeze).cache
-    // calculates its center
+    // calculates the cluster center
     val pointStat = breezeData.mapPartitions { iter =>
       iter match {
         case iter if iter.isEmpty => Iterator.empty
@@ -465,6 +491,13 @@ object ClusterTree {
     }.reduce((a, b) => (a._1 + b._1, a._2 + b._2))
     val center = Vectors.fromBreeze(pointStat._1.:/(pointStat._2.toDouble))
     new ClusterTree(center, breezeData)
+  }
+
+  private[mllib]
+  def findClosestCenter(metric: Function2[BV[Double], BV[Double], Double])
+        (centers: Array[BV[Double]])
+        (point: BV[Double]): Int = {
+    centers.zipWithIndex.map { case (center, idx) => (idx, metric(center, point))}.minBy(_._2)._1
   }
 }
 
@@ -507,17 +540,17 @@ class ClusterTreeStatsUpdater private (private var dimension: Option[Int])
       case ((nA, sumA, sumOfSquareA), (nB, sumB, sumOfSquareB)) =>
         val nAB = nA + nB
         val sumAB = sumA + sumB
-        val sumbOfSquareAB = sumOfSquareA + sumOfSquareB
-        (nAB, sumAB, sumbOfSquareAB)
+        val sumOfSquareAB = sumOfSquareA + sumOfSquareB
+        (nAB, sumAB, sumOfSquareAB)
     }
     // set the number of rows
-    clusterTree.setDataSize(Some(n.toLong))
+    clusterTree.dataSize = Some(n.toLong)
     // set the sum of the variances of each element
     val variance = n match {
       case n if n > 1 => (sumOfSquares.:*(n) - (sum :* sum)) :/ (n * (n - 1.0))
       case _ => zeroVector()
     }
-    clusterTree.setVariance(Some(variance.toArray.sum))
+    clusterTree.variance = Some(variance.toArray.sum)
 
     clusterTree
   }
