@@ -15,20 +15,18 @@
  * limitations under the License.
  */
 
-package org.apache.spark.mllib.clustering
+import org.scalatest.FunSuite
 
-import breeze.linalg.{DenseVector => BDV, Vector => BV, norm => breezeNorm}
-import org.apache.spark.mllib.linalg.Vector
+class AccuracyTestAppSuite extends FunSuite {
 
-abstract class ClosestCenterFinder(val centers: Array[Vector])
-    extends Function1[Vector, Int] with Serializable {
-  override def apply(v1: Vector): Int
-}
+  test("main") {
+    val master = "local"
+    val maxCores = 1
+    val numClusters = 8
+    val dimension = 2
+    val numPartitions = 4
 
-class EuclideanClosestCenterFinder(centers: Array[Vector]) extends ClosestCenterFinder(centers) {
-
-  override def apply(point: Vector): Int = {
-    val distances = centers.map { center => breezeNorm(point.toBreeze - center.toBreeze, 2)}
-    distances.indexOf(distances.min)
+    val args = Array(master, maxCores, numClusters, dimension, numPartitions).map(_.toString)
+    AccuracyTestApp.main(args)
   }
 }

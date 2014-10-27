@@ -1,0 +1,54 @@
+## Experiment 1: Slaves x 2
+
+### EC2 Environment
+
+I run the hierarchical clustering application on EC2. 
+
+- Master Instance Type: r3.large
+- Slave Instance Type: r3.8xlarge
+    - Cores: 32
+    - Memory: 144GB
+- # of Slaves: 2
+    - Total Cores: 64
+    - Total Memory: 239GB
+
+
+### Experimental Setup
+
+I execute my hierarchical clustering, changing the some parameters as bellow.  The data had been generated randomly. And then I measured the execution time for training each model.
+
+- # Used Cores: 160
+- # Clusters: 5, 10, 20, 50, 100
+- # Rows: 100000, 10000000 10000000
+- # Dimensions: 100
+
+You know, we have to run the application under another condisions for benchmarking. For example, changing the number of used cores and the number of dimensions.
+
+### The Result of Training Execution Time
+
+Under the number of rows is 10000000 and the number of clusters is 100, I could not run my application, maybe because of [SPARK-3106](https://issues.apache.org/jira/browse/SPARK-3106).
+
+```{r echo=FALSE, warning=FALSE}
+library(reshape2)
+result <- read.csv("./data/benchmark-cores64-dim100.csv")
+result$sec <- result$trainMilliSec / 1000
+result.cast <- dcast(result, numClusters ~ rows, value.var="sec", sum)
+```
+
+```{r echo=FALSE, warning=FALSE}
+x <- result2.cast[, 1]
+y <- result2.cast[, 2:4]
+matplot(x, y
+        , xlab="# Rows"
+        , ylab="Training Execution Time [sec]"
+        , pch=1:(length(y)), col=rainbow(length(y)), type="o")
+grid()
+legend("topleft", legend=c(names(y))
+       , pch=1:(length(y)), col=rainbow(length(y)))
+```
+
+```{r echo=FALSE, warning=FALSE, results="asis"}
+kable(result)
+```
+
+Where `numClusters` is the number of clusters gotten, `trainMilliSec` is the execution time for training in millisecond, `dimension` is the number of dimensions of the vectors which are treated in the clustering algorithm, `rows` is the number of trained vectors, `numPartitions` is the number of partitions of a RDD, `sec` is the execution time for training in second.
