@@ -38,6 +38,13 @@ trait HierarchicalClusteringConf extends Serializable {
 
   def getNumClusters(): Int = this.numClusters
 
+  def setNumRetries(numRetries: Int): this.type = {
+    this.numRetries = numRetries
+    this
+  }
+
+  def getNumRetries(): Int = this.numRetries
+
   def setSubIterations(subIterations: Int): this.type = {
     this.subIterations = subIterations
     this
@@ -83,6 +90,7 @@ trait HierarchicalClusteringConf extends Serializable {
 class HierarchicalClustering(
   private[mllib] var numClusters: Int,
   private[mllib] var subIterations: Int,
+  private[mllib] var numRetries: Int,
   private[mllib] var epsilon: Double,
   private[mllib] var randomSeed: Int,
   private[mllib] var randomRange: Double)
@@ -91,13 +99,14 @@ class HierarchicalClustering(
   /**
    * Constructs with the default configuration
    */
-  def this() = this(20, 20, 10E-4, 1, 0.1)
+  def this() = this(20, 20, 10, 10E-4, 1, 0.1)
 
   /** Shows the parameters */
   override def toString(): String = {
     Array(
       s"numClusters:${numClusters}",
       s"subIterations:${subIterations}",
+      s"numRetries:${numRetries}",
       s"epsilon:${epsilon}",
       s"randomSeed:${randomSeed}",
       s"randomRange:${randomRange}"
@@ -125,7 +134,6 @@ class HierarchicalClustering(
     // If the followed conditions are satisfied, and then stop the training.
     //   1. There is no splittable cluster
     //   2. The number of the splitted clusters is greater than that of given clusters
-    //   3. The total variance of all clusters increases, when a cluster is splitted
     var totalVariance = Double.MaxValue
     var newTotalVariance = model.clusterTree.getVariance().get
     var step = 1
@@ -133,17 +141,21 @@ class HierarchicalClustering(
         && model.clusterTree.getTreeSize() < this.numClusters) {
 
       // split some times in order not to be wrong clustering result
-      if (node.get.getVariance().get > this.epsilon) {
-        var subNodes = split(node.get).map(subNode => statsUpdater(subNode))
-        if (subNodes.size == 2) {
-          // insert the nodes to the tree
-          node.get.insert(subNodes.toList)
-          // calculate the local dendrogram height
-          val dist = breezeNorm(subNodes(0).center.toBreeze - subNodes(1).center.toBreeze, 2)
-          node.get.height = Some(dist)
-          // unpersist unnecessary cache because its children nodes are cached
-          node.get.data.unpersist()
-          logInfo(s"the number of cluster is ${model.clusterTree.getTreeSize()} at step ${step}")
+      var isMerged = false
+      for (i <- 1 to this.numRetries) {
+        if (node.get.getVariance().get > this.epsilon && isMerged == false) {
+          var subNodes = split(node.get).map(subNode => statsUpdater(subNode))
+          if (subNodes.size == 2) {
+            // insert the nodes to the tree
+            node.get.insert(subNodes.toList)
+            // calculate the local dendrogram height
+            val dist = breezeNorm(subNodes(0).center.toBreeze - subNodes(1).center.toBreeze, 2)
+            node.get.height = Some(dist)
+            // unpersist unnecessary cache because its children nodes are cached
+            node.get.data.unpersist()
+            logInfo(s"the number of cluster is ${model.clusterTree.getTreeSize()} at step ${step}")
+            isMerged = true
+          }
         }
       }
       node.get.isVisited = true
@@ -285,6 +297,7 @@ object HierarchicalClustering {
    * @param data trained data
    * @param numClusters the maximum number of clusters you want
    * @param subIterations the iteration of
+   * @param numRetries the number of retries when the clustering can't be succeeded
    * @param epsilon the relative error that bisecting is satisfied
    * @param randomSeed the randomseed to generate the initial vectors for each bisecting
    * @param randomRange the range of error to genrate the initial vectors for each bisecting
@@ -294,12 +307,14 @@ object HierarchicalClustering {
     data: RDD[Vector],
     numClusters: Int,
     subIterations: Int,
+    numRetries: Int,
     epsilon: Double,
     randomSeed: Int,
     randomRange: Double): HierarchicalClusteringModel = {
     val algo = new HierarchicalClustering()
         .setNumClusters(numClusters)
         .setSubIterations(subIterations)
+        .setNumRetries(numRetries)
         .setEpsilon(epsilon)
         .setRandomSeed(randomSeed)
         .setRandomRange(randomRange)
@@ -318,6 +333,7 @@ object HierarchicalClustering {
  * @param children the sub node(s) of the cluster
  * @param parent the parent node of the cluster
  */
+private[mllib]
 class ClusterTree private (
   val center: Vector,
   private[mllib] val data: RDD[BV[Double]],
@@ -326,7 +342,7 @@ class ClusterTree private (
   private[mllib] var dataSize: Option[Long],
   private[mllib] var children: List[ClusterTree],
   private[mllib] var parent: Option[ClusterTree],
-  private[mllib] var isVisited: Boolean) extends Serializable {
+  var isVisited: Boolean) extends Serializable {
 
   def this(center: Vector, data: RDD[BV[Double]]) =
     this(center, data, None, None, None, List.empty[ClusterTree], None, false)
