@@ -342,7 +342,7 @@ class ClusterTree private (
   private[mllib] var dataSize: Option[Long],
   private[mllib] var children: List[ClusterTree],
   private[mllib] var parent: Option[ClusterTree],
-  private[mllib] var isVisited: Boolean) extends Serializable {
+  var isVisited: Boolean) extends Serializable {
 
   def this(center: Vector, data: RDD[BV[Double]]) =
     this(center, data, None, None, None, List.empty[ClusterTree], None, false)
