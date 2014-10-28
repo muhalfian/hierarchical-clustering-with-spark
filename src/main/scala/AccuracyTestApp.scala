@@ -95,6 +95,7 @@ object AccuracyTestApp {
           s"Count:${node.getDataSize()}, " +
           s"Variance:${node.getVariance()}, " +
           s"Children:${node.getChildren().map(_.hashCode())}" +
+          s"isVisited:${node.isVisited}" +
           s"Center:${node.center}"
       )
     }
