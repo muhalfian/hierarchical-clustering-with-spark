@@ -23,7 +23,7 @@ object HierarchicalClusteringApp {
         .set("spark.cores.max", maxCores)
     val sc = new SparkContext(conf)
 
-    val data = generateData(sc, numPartitions, rows, dimension)
+    val data = generateData(sc, numPartitions, rows, dimension, numClusters)
     data.repartition(numPartitions)
     data.cache
     val model = HierarchicalClustering.train(data, numClusters)
@@ -41,9 +41,22 @@ object HierarchicalClusteringApp {
   }
 
 
-  def generateData(sc: SparkContext, numPartitions: Int, rows: Int, dim: Int): RDD[Vector] = {
+  def generateData(sc: SparkContext,
+    numPartitions: Int,
+    rows: Int,
+    dim: Int,
+    numClusters: Int): RDD[Vector] = {
     sc.parallelize((1 to rows.toInt), numPartitions).map { i =>
-      Vectors.dense((1 to dim).map(j => i + Math.random()).toArray)
+      val idx = (i % (numClusters - 1)) + 1
+      val indexes = for (j <- 0 to (Math.floor(dim / numClusters).toInt - 1)) yield j * numClusters + idx
+      val values: Array[Double] = (0 to (dim - 1)).map { j =>
+        val value = indexes.contains(j) match {
+          case true => idx + idx * 0.01 * Math.random()
+          case false => 0.0
+        }
+        value
+      }.toArray
+      Vectors.dense(values)
     }
   }
 }
