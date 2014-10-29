@@ -75,5 +75,5 @@ class HierarchicalClusteringModel private (
   /**
    * Computes the sum of total variance of all cluster
    */
-  def computeCost(): Double =  this.getClusters().map(_.getVariance().get).sum
+  def computeCost(): Double = this.getClusters().map(_.getVariance().get).sum
 }

@@ -17,9 +17,10 @@
 
 package org.apache.spark.mllib.clustering
 
-import org.apache.spark.SparkContext._
-import org.apache.spark.mllib.linalg.{Vector, Vectors}
+import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.linalg.Vector
 import org.apache.spark.rdd.RDD
+import org.apache.spark.SparkContext._
 import org.apache.spark.util.LocalSparkContext
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
@@ -35,13 +36,13 @@ class HierarchicalClusteringModelSuite
   var sparseModel: HierarchicalClusteringModel = _
 
   override def beforeEach() {
-    denseSeed = (0 to 49).toSeq.map { i =>
-      val label = i % 5
+    denseSeed = (1 to 99).toSeq.map { i =>
+      val label = i % 3
       val vector = Vectors.dense(label, label, label)
       (label, vector)
     }
     denseData = sc.parallelize(denseSeed.map(_._2))
-    app = new HierarchicalClustering().setNumClusters(10).setRandomSeed(1)
+    app = new HierarchicalClustering().setNumClusters(3).setRandomSeed(1)
     denseModel = app.run(denseData)
 
     sparseSeed = (1 to 99).toSeq.map { i =>
@@ -56,8 +57,10 @@ class HierarchicalClusteringModelSuite
   test("should get the array of ClusterTree") {
     val clusters = denseModel.getClusters()
     assert(clusters.isInstanceOf[Array[ClusterTree]])
-    assert(clusters.size === 5)
+    assert(clusters.size === 3)
+  }
 
+  test("should get the array of ClusterTree with sparse vectors") {
     val clusters2 = sparseModel.getClusters()
     assert(clusters2.isInstanceOf[Array[ClusterTree]])
     assert(clusters2.size === 3)
@@ -67,19 +70,11 @@ class HierarchicalClusteringModelSuite
     val predictedData = denseModel.predict(denseData)
     // the number of contained vectors in each cluster is 10
     predictedData.map { case (i, vector) => (i, 1)}.reduceByKey(_ + _)
-        .collect().foreach { case (idx, n) => assert(n === 10)}
+        .collect().foreach { case (idx, n) => assert(n === 33)}
 
     val predictedData2 = sparseModel.predict(sparseData)
     predictedData2.map { case (i, vector) => (i, 1)}.reduceByKey(_ + _)
         .collect().foreach { case (idx, n) => assert(n === 33)}
-  }
-
-  test("predicted result should be same the seed data") {
-//    val predictedData = denseModel.predict(denseData).collect()
-//    assert(predictedData === denseSeed)
-
-//    val predictedData2 = sparseModel.predict(sparseData).collect().toSeq
-//    assert(predictedData2 === sparseSeed)
   }
 
   test("sum of the total variance") {

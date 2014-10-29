@@ -232,7 +232,8 @@ class HierarchicalClustering(
         val map = scala.collection.mutable.Map.empty[Int, (BV[Double], Int)]
         iter.foreach { point =>
           val idx = ClusterTree.findClosestCenter(metric)(centers)(point)
-          val (sumBV, n) = map.get(idx).getOrElse((BV.zeros[Double](point.size), 0))
+          val (sumBV, n) = map.get(idx)
+              .getOrElse((new BSV[Double](Array(), Array(), point.size), 0))
           map(idx) = (sumBV + point, n + 1)
         }
         map.toIterator

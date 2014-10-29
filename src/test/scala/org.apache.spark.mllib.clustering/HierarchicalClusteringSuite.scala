@@ -97,7 +97,6 @@ class HierarchicalClusteringSuite extends FunSuite with LocalSparkContext with B
     val model = app.run(data)
     assert(model.clusterTree.toSeq().filter(_.isLeaf()).size === 7)
     model.clusterTree.toSeq().foreach { tree: ClusterTree => assert(tree.getVariance() != None)}
-//    assert(model.clusterTree.getHeight() ~== 32.50567 absTol 0.0001)
   }
 
   test("train with a random dataset") {
