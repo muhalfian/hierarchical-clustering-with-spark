@@ -1,0 +1,12 @@
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "137819", "sparsity" : 1.0, "dimension" : "10000", "rows" : "100000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "67952", "sparsity" : 0.5, "dimension" : "10000", "rows" : "100000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "45089", "sparsity" : 0.2, "dimension" : "10000", "rows" : "100000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "44942", "sparsity" : 0.1, "dimension" : "10000", "rows" : "100000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "70406", "sparsity" : 0.01, "dimension" : "10000", "rows" : "100000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "72048", "sparsity" : 0.001, "dimension" : "10000", "rows" : "100000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "412930", "sparsity" : 1.0, "dimension" : "10000", "rows" : "500000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "220286", "sparsity" : 0.5, "dimension" : "10000", "rows" : "500000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "123754", "sparsity" : 0.2, "dimension" : "10000", "rows" : "500000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "120261", "sparsity" : 0.1, "dimension" : "10000", "rows" : "500000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "204311", "sparsity" : 0.01, "dimension" : "10000", "rows" : "500000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "222223", "sparsity" : 0.001, "dimension" : "10000", "rows" : "500000", "numPartitions" : "160"}

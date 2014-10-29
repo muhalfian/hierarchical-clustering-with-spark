@@ -1,0 +1,8 @@
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "26035", "dimension" : "1000", "rows" : "100000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "31922", "dimension" : "3000", "rows" : "100000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "39810", "dimension" : "5000", "rows" : "100000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "59455", "dimension" : "10000", "rows" : "100000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "36380", "dimension" : "1000", "rows" : "500000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "73077", "dimension" : "3000", "rows" : "500000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "100398", "dimension" : "5000", "rows" : "500000", "numPartitions" : "160"}
+{"maxCores" : "160", "numClusters" : "20", "trainMilliSec" : "232877", "dimension" : "10000", "rows" : "500000", "numPartitions" : "160"}

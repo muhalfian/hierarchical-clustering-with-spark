@@ -29,6 +29,9 @@ As a result of the experiments, it is good enought.
 ```{r child=c('experiment240.Rmd')}
 ```
 
+```{r child=c('experiment250.Rmd')}
+```
+
 ```{r child=c('discussion2.Rmd')}
 ```
 
