@@ -36,7 +36,8 @@ object HierarchicalClusteringWithSparseVectorApp {
       "dimension" -> dimension.toString,
       "numClusters" -> numClusters.toString,
       "numPartitions" -> numPartitions.toString,
-      "maxCores" -> maxCores.toString
+      "maxCores" -> maxCores.toString,
+      "sparsity" -> sparsity
     )
     println(JSONObject(result).toString())
     model.clusterTree.toSeq().foreach(tree => println(tree.toString()))
