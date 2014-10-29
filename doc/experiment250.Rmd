@@ -1,0 +1,70 @@
+## Experiment 5: The Effects of Vector Sparsity
+
+I verified the effect of vetor sparsity at the divisive hierarchical clustering.
+Basically speaking, the more sparsity-proportion decreases, the more the training execution time decrease. However, if the sparsity is small too, the time increases. Because it is difficult to split a cluster to good clusters and the many bisecting retries are executed.
+
+### Experimental Setup
+
+I execute the hierarchical clustering, changing the some parameters as bellow. 
+The data had been generated randomly. 
+And then I measured the execution time for training each model.
+
+- # Used Cores: 160
+- # Clusters: 20
+- # Rows: 100000, 500000
+- # Dimensions: 10000
+- Sparsity-Proportion: 0.001, 0.01, 0.1, 0.2, 0.5, 1.0
+
+Where `Sparsity-Proportion` means a ratio of active elements againt vector size.
+There are a few example to explain sparsity-propotion as below.
+
+```
+## This vector means  (1.0, 2.0, 3.0, 4.0, 5.0)
+## The sparse-propotion is 1.0
+SparseVector(5, ((0, 1.0), (1, 2.0), (2, 3.0), (3, 4.0), (4, 5.0)))
+
+## This vector means  (0.0, 2.0, 0.0, 0.0, 5.0)
+## The sparse-propotion is 0.2
+SparseVector(5, ((1, 2.0), (4, 5.0)))
+
+## This vector means  (0.0, 2.0, 0.0, 0.0, 0.0)
+## The sparse-propotion is 0.1
+SparseVector(5, ((1, 2.0)))
+```
+
+
+```{r echo=FALSE, warning=FALSE}
+tmp <- read.csv("./data/dense-vs-sparse/sparse-proportion.csv")
+tmp$sec <- tmp$trainMilliSec / 1000
+```
+
+```{r echo=FALSE, warning=FALSE}
+library(reshape2)
+tmp.cast <- dcast(tmp, sparseProportion ~ rows, value.var="sec", sum)
+x <- tmp.cast[, 1]
+y <- tmp.cast[, 2:ncol(tmp.cast)]
+.names <- names(y)
+matplot(x, y
+        , xlab="Sparse-Proportion"
+        , ylab="Training Execution Time [sec]"
+        , ylim=c(0, max(y))
+        , log="x"
+        , pch=1:(length(y)), col=rainbow(length(y)), type="o")
+legend("topleft", legend=.names
+       , pch=1:(length(y)), col=rainbow(length(y)))
+
+x <- tmp.cast[, 1]
+y <- apply(tmp.cast[, 2:ncol(tmp.cast)], 2, function(x){x / x[length(x)]})
+matplot(x, y
+        , xlab="Sparse-Propotion"
+        , ylab=""
+        , ylim=c(0, max(y))
+        , log="x"
+        , pch=1:(length(y)), col=rainbow(ncol(y)), type="o")
+legend("topleft", legend=.names
+       , pch=1:(length(y)), col=rainbow(ncol(y)))
+```
+
+```{r echo=FALSE, warning=FALSE, results="asis"}
+kable(tmp)
+```
