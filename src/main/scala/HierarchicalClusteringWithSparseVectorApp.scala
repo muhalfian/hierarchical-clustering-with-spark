@@ -15,15 +15,17 @@ object HierarchicalClusteringWithSparseVectorApp {
     val dimension = args(3).toInt
     val numClusters = args(4).toInt
     val numPartitions = args(5).toInt
+    val sparsity = args(6).toDouble
 
-    val appName = s"${this.getClass().getSimpleName},maxCores,${maxCores},rows:${rows}:dim:${dimension},"
+    val appName = s"${this.getClass().getSimpleName},maxCores:${maxCores}," +
+        s"rows:${rows}, dim:${dimension}, sparsity:${sparsity}"
     val conf = new SparkConf()
         .setAppName(appName)
         .setMaster(master)
         .set("spark.cores.max", maxCores)
     val sc = new SparkContext(conf)
 
-    val data = generateData(sc, numPartitions, rows, dimension, numClusters)
+    val data = generateData(sc, numPartitions, rows, dimension, sparsity)
     data.repartition(numPartitions)
     data.cache
     val model = HierarchicalClustering.train(data, numClusters)
@@ -44,11 +46,12 @@ object HierarchicalClusteringWithSparseVectorApp {
     numPartitions: Int,
     rows: Int,
     dim: Int,
-    numClusters: Int): RDD[Vector] = {
+    sparsity: Double): RDD[Vector] = {
     sc.parallelize((1 to rows.toInt), numPartitions).map { i =>
-      val idx = (i % (numClusters - 1)) + 1
-      val indexes = for (j <- 0 to (Math.floor(dim / numClusters).toInt - 1)) yield j * numClusters + idx
-      val values = indexes.map(j => idx + idx * 0.01 * Math.random())
+      val numElements = Math.ceil(sparsity * dim).toInt
+      val indexes = scala.util.Random.shuffle((0 to (dim - 1)).toList).take(numElements)
+          .sortWith((i, j) => i < j)
+      val values = indexes.map(j => j + j * 0.01 * Math.random())
       Vectors.sparse(dim, indexes.toArray, values.toArray)
     }
   }
