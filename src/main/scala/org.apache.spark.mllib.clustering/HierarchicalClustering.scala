@@ -17,7 +17,7 @@
 
 package org.apache.spark.mllib.clustering
 
-import breeze.linalg.{DenseVector => BDV, Vector => BV, norm => breezeNorm}
+import breeze.linalg.{DenseVector => BDV, SparseVector => BSV, Vector => BV, norm => breezeNorm}
 import org.apache.spark.Logging
 import org.apache.spark.SparkContext._
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
@@ -524,7 +524,7 @@ object ClusterTree {
  * Calculates the sum of the variances of the cluster
  */
 private[clustering]
-class ClusterTreeStatsUpdater private (private var dimension: Option[Int])
+class ClusterTreeStatsUpdater private (private var first: Option[BV[Double]])
     extends Function1[ClusterTree, ClusterTree] with Serializable {
 
   def this() = this(None)
@@ -537,8 +537,15 @@ class ClusterTreeStatsUpdater private (private var dimension: Option[Int])
    */
   def apply(clusterTree: ClusterTree): ClusterTree = {
     val data = clusterTree.data
-    if (this.dimension == None) this.dimension = Some(data.first().size)
-    val zeroVector = () => Vectors.zeros(this.dimension.get).toBreeze
+    if (this.first == None) this.first = Some(data.first())
+    def zeroVector(): BV[Double] = {
+      val vector = first.get match {
+        case dense if first.get.isInstanceOf[BDV[Double]] => Vectors.zeros(first.get.size)
+        case sparse if first.get.isInstanceOf[BSV[Double]] => Vectors.sparse(first.get.size, Seq())
+        case _ => throw new UnsupportedOperationException(s"unexpected variable type")
+      }
+      vector.toBreeze
+    }
 
     // mapper for each partition
     val eachStats = data.mapPartitions { iter =>
@@ -569,7 +576,7 @@ class ClusterTreeStatsUpdater private (private var dimension: Option[Int])
       case n if n > 1 => (sumOfSquares.:*(n) - (sum :* sum)) :/ (n * (n - 1.0))
       case _ => zeroVector()
     }
-    clusterTree.variance = Some(variance.toArray.sum / this.dimension.get)
+    clusterTree.variance = Some(variance.toArray.sum / this.first.get.size)
 
     clusterTree
   }
