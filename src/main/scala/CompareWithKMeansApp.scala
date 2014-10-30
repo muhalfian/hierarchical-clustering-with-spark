@@ -4,6 +4,8 @@ import org.apache.spark.mllib.linalg.Vector
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.rdd.RDD
 
+import scala.util.parsing.json.JSONObject
+
 object CompareWithKMeansApp {
 
   def main(args: Array[String]) {
@@ -41,11 +43,20 @@ object CompareWithKMeansApp {
     hierarchical.predict(data)
     val hierarchicalPredictTime = System.currentTimeMillis() - start
 
+    val params = Map(
+      "rows" -> rows.toString,
+      "dimension" -> dimension.toString,
+      "numClusters" -> numClusters.toString,
+      "numPartitions" -> numPartitions.toString,
+      "maxCores" -> maxCores.toString
+    )
+
     // show the results
+    println(JSONObject(params).toString())
     println(s"KMeans Training Elappsed Time: ${kmeansTrainTime.toDouble / 1000} [sec]")
     println(s"KMeans Predicting Elappsed Time: ${kmeansPredictTime.toDouble / 1000} [sec]")
-    println(s"KMeans Training Elappsed Time: ${hierarchicalTrainTime.toDouble / 1000} [sec]")
-    println(s"KMeans Predicting Elappsed Time: ${hierarchicalPredictTime.toDouble / 1000} [sec]")
+    println(s"Hierarchical Training Elappsed Time: ${hierarchicalTrainTime.toDouble / 1000} [sec]")
+    println(s"Hierarchical Predicting Elappsed Time: ${hierarchicalPredictTime.toDouble / 1001} [sec]")
   }
 
   def generateData(sc: SparkContext,
