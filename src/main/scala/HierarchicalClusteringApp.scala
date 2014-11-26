@@ -24,6 +24,8 @@ object HierarchicalClusteringApp {
     val sc = new SparkContext(conf)
 
     val data = generateData(sc, numPartitions, rows, dimension, numClusters)
+    data.cache
+    data.count
     val model = HierarchicalClustering.train(data, numClusters)
 
     val result = Map(
