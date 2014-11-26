@@ -46,7 +46,11 @@ object HierarchicalClusteringApp {
     rows: Int,
     dim: Int,
     numClusters: Int): RDD[Vector] = {
-    sc.parallelize((1 to rows.toInt), numPartitions).map { i =>
+    val seed = sc.parallelize((1 to rows.toInt), numPartitions)
+    seed.cache
+    seed.count
+
+    val data = seed.map { i =>
       val idx = (i % (numClusters - 1)) + 1
       val indexes = for (j <- 0 to (Math.floor(dim / numClusters).toInt - 1)) yield j * numClusters + idx
       val values: Array[Double] = (0 to (dim - 1)).map { j =>
@@ -58,5 +62,7 @@ object HierarchicalClusteringApp {
       }.toArray
       Vectors.dense(values)
     }
+    seed.unpersist()
+    data
   }
 }

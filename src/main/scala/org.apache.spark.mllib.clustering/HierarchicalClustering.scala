@@ -147,7 +147,7 @@ class HierarchicalClustering(
           var subNodes = split(node.get).map(subNode => statsUpdater(subNode))
           if (subNodes.size == 2) {
             // insert the nodes to the tree
-            node.get.insert(subNodes.toList)
+            node.get.insert(subNodes.toSeq)
             // calculate the local dendrogram height
             val dist = breezeNorm(subNodes(0).center.toBreeze - subNodes(1).center.toBreeze, 2)
             node.get.height = Some(dist)
@@ -341,7 +341,7 @@ class ClusterTree private (
   private[mllib] var height: Option[Double],
   private[mllib] var variance: Option[Double],
   private[mllib] var dataSize: Option[Long],
-  private[mllib] var children: List[ClusterTree],
+  private[mllib] var children: Seq[ClusterTree],
   private[mllib] var parent: Option[ClusterTree],
   var isVisited: Boolean) extends Serializable {
 
@@ -367,7 +367,7 @@ class ClusterTree private (
    *
    * @param children inserted sub nodes
    */
-  def insert(children: List[ClusterTree]): Unit = {
+  def insert(children: Seq[ClusterTree]): Unit = {
     this.children = this.children ++ children
     children.foreach(child => child.parent = Some(this))
   }
@@ -377,7 +377,7 @@ class ClusterTree private (
    *
    * @param child inserted sub node
    */
-  def insert(child: ClusterTree): Unit = insert(List(child))
+  def insert(child: ClusterTree): Unit = insert(Seq(child))
 
   /**
    * Converts the tree into Seq class
@@ -472,7 +472,7 @@ class ClusterTree private (
 
   def getParent(): Option[ClusterTree] = this.parent
 
-  def getChildren(): List[ClusterTree] = this.children
+  def getChildren(): Seq[ClusterTree] = this.children
 
   def isLeaf(): Boolean = (this.children.size == 0)
 
@@ -539,14 +539,7 @@ class ClusterTreeStatsUpdater private (private var first: Option[BV[Double]])
   def apply(clusterTree: ClusterTree): ClusterTree = {
     val data = clusterTree.data
     if (this.first == None) this.first = Some(data.first())
-    def zeroVector(): BV[Double] = {
-      val vector = first.get match {
-        case dense if first.get.isInstanceOf[BDV[Double]] => Vectors.zeros(first.get.size)
-        case sparse if first.get.isInstanceOf[BSV[Double]] => Vectors.sparse(first.get.size, Seq())
-        case _ => throw new UnsupportedOperationException(s"unexpected variable type")
-      }
-      vector.toBreeze
-    }
+    def zeroVector(): BV[Double] = Vectors.sparse(first.get.size, Seq()).toBreeze
 
     // mapper for each partition
     val eachStats = data.mapPartitions { iter =>
