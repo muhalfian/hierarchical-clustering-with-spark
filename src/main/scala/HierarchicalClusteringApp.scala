@@ -62,7 +62,6 @@ object HierarchicalClusteringApp {
       }.toArray
       Vectors.dense(values)
     }
-    seed.unpersist()
     data
   }
 }
