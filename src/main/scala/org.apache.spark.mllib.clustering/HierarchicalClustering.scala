@@ -18,7 +18,7 @@
 package org.apache.spark.mllib.clustering
 
 import breeze.linalg.{DenseVector => BDV, SparseVector => BSV, Vector => BV, norm => breezeNorm}
-import org.apache.spark.internal.Logging
+// import org.apache.spark.internal.Logging
 import org.apache.spark.SparkContext._
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.rdd.RDD
@@ -94,7 +94,7 @@ class HierarchicalClustering(
   private[mllib] var epsilon: Double,
   private[mllib] var randomSeed: Int,
   private[mllib] var randomRange: Double)
-    extends Serializable with Logging with HierarchicalClusteringConf {
+    extends Serializable with HierarchicalClusteringConf {
 
   /**
    * Constructs with the default configuration
@@ -121,7 +121,8 @@ class HierarchicalClustering(
    */
   def run(data: RDD[Vector]): HierarchicalClusteringModel = {
     validateData(data)
-    logInfo(s"Run with ${this}")
+    // logInfo(s"Run with ${this}")
+    println(s"Run with ${this}")
 
     val startTime = System.currentTimeMillis() // to measure the execution time
     val clusterTree = ClusterTree.fromRDD(data) // make the root node
@@ -153,7 +154,8 @@ class HierarchicalClustering(
             node.get.height = Some(dist)
             // unpersist unnecessary cache because its children nodes are cached
             node.get.data.unpersist()
-            logInfo(s"the number of cluster is ${model.clusterTree.getTreeSize()} at step ${step}")
+            // logInfo(s"the number of cluster is ${model.clusterTree.getTreeSize()} at step ${step}")
+            println(s"the number of cluster is ${model.clusterTree.getTreeSize()} at step ${step}")
             isMerged = true
           }
         }
@@ -250,7 +252,10 @@ class HierarchicalClustering(
       centers = newCenters.toArray
       numIter += 1
 
-      logInfo(s"${numIter} iterations is finished" +
+      // logInfo(s"${numIter} iterations is finished" +
+      //     s" for ${System.currentTimeMillis() - startTimeOfIter}" +
+      //     s" at ${getClass}.split")
+      println(s"${numIter} iterations is finished" +
           s" for ${System.currentTimeMillis() - startTimeOfIter}" +
           s" at ${getClass}.split")
     }
@@ -268,7 +273,10 @@ class HierarchicalClustering(
       }
       case _ => throw new RuntimeException(s"something wrong with # centers:${centers.size}")
     }
-    logInfo(s"${this.getClass.getSimpleName}.split end" +
+    // logInfo(s"${this.getClass.getSimpleName}.split end" +
+    //     s" with total iterations" +
+    //     s" for ${System.currentTimeMillis() - startTime}")
+    println(s"${this.getClass.getSimpleName}.split end" +
         s" with total iterations" +
         s" for ${System.currentTimeMillis() - startTime}")
     nodes
