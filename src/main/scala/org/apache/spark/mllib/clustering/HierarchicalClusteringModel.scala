@@ -59,12 +59,12 @@ class HierarchicalClusteringModel private (
 
     // TODO Supports distance metrics other Euclidean distance metric
     val metric = (bv1: BV[Double], bv2: BV[Double]) => breezeNorm(bv1 - bv2, 2.0)
-    val centers = getClusters().map(_.center.toBreeze)
+    val centers = getClusters().map(_.center.asBreeze)
     val treeRoot = this.clusterTree
     data.sparkContext.broadcast(metric)
     data.sparkContext.broadcast(centers)
     data.sparkContext.broadcast(treeRoot)
-    val predicted = data.map(point => (ClusterTree.findClosestCenter(metric)(centers)(point.toBreeze), point))
+    val predicted = data.map(point => (ClusterTree.findClosestCenter(metric)(centers)(point.asBreeze), point))
     this.predictTime = (System.currentTimeMillis() - startTime).toInt
     predicted
   }
