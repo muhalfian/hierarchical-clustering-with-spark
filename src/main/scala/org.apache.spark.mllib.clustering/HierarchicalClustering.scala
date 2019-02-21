@@ -150,7 +150,7 @@ class HierarchicalClustering(
             // insert the nodes to the tree
             node.get.insert(subNodes.toSeq)
             // calculate the local dendrogram height
-            val dist = breezeNorm(subNodes(0).center.toBreeze - subNodes(1).center.toBreeze, 2)
+            val dist = breezeNorm(subNodes(0).center.asBreeze - subNodes(1).center.asBreeze, 2)
             node.get.height = Some(dist)
             // unpersist unnecessary cache because its children nodes are cached
             node.get.data.unpersist()
@@ -196,8 +196,8 @@ class HierarchicalClustering(
   private[clustering] def takeInitCenters(centers: Vector): Array[BV[Double]] = {
     val random = new XORShiftRandom()
     Array(
-      centers.toBreeze.map(elm => elm - random.nextDouble() * elm * this.randomRange),
-      centers.toBreeze.map(elm => elm + random.nextDouble() * elm * this.randomRange)
+      centers.asBreeze.map(elm => elm - random.nextDouble() * elm * this.randomRange),
+      centers.asBreeze.map(elm => elm + random.nextDouble() * elm * this.randomRange)
     )
   }
 
@@ -407,7 +407,7 @@ class ClusterTree private (
   def getClusters(): Seq[ClusterTree] = {
     toSeq().filter(_.isLeaf()).sortWith { case (a, b) =>
       a.getDepth() < b.getDepth() &&
-          breezeNorm(a.center.toBreeze, 2) < breezeNorm(b.center.toBreeze, 2)
+          breezeNorm(a.center.asBreeze, 2) < breezeNorm(b.center.asBreeze, 2)
     }
   }
 
@@ -446,7 +446,7 @@ class ClusterTree private (
     this.children.size match {
       case 0 => this
       case 2 => {
-        val distances = this.children.map(tree => metric(tree.center.toBreeze, v.toBreeze))
+        val distances = this.children.map(tree => metric(tree.center.asBreeze, v.asBreeze))
         val minIndex = distances.indexOf(distances.min)
         this.children(minIndex).assignCluster(metric)(v)
       }
@@ -506,7 +506,7 @@ object ClusterTree {
    * @return a ClusterTree instance
    */
   def fromRDD(data: RDD[Vector]): ClusterTree = {
-    val breezeData = data.map(_.toBreeze).cache
+    val breezeData = data.map(_.asBreeze).cache
     // calculates the cluster center
     val pointStat = breezeData.mapPartitions { iter =>
       iter match {
@@ -547,7 +547,7 @@ class ClusterTreeStatsUpdater private (private var first: Option[BV[Double]])
   def apply(clusterTree: ClusterTree): ClusterTree = {
     val data = clusterTree.data
     if (this.first == None) this.first = Some(data.first())
-    def zeroVector(): BV[Double] = Vectors.sparse(first.get.size, Seq()).toBreeze
+    def zeroVector(): BV[Double] = Vectors.sparse(first.get.size, Seq()).asBreeze
 
     // mapper for each partition
     val eachStats = data.mapPartitions { iter =>
