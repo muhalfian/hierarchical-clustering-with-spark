@@ -26,6 +26,8 @@ do
         $SPARK_SUBMIT  \
           --master "$__SPARK_MASTER" \
           --class HierarchicalClusteringApp \
+          --deploy-mode cluster \
+          --supervise  \
           --total-executor-cores $__MAX_CPU_CORES \
           --jars $__ADDITIONAL_JAR \
           $__JAR "$__SPARK_MASTER" $__MAX_CPU_CORES $__DATA_SIZE $__DIMENSION $__NUM_CLUSTERS $__NUM_PARTITIONS
