@@ -10,8 +10,9 @@ __DATA_SIZE_LIST="10000 100000 1000000 10000000 100000000"
 __DIMENSION_LIST="2 5 10 20 50 100 200 1000 10000"
 __NUM_CLUSTERS_LIST="5 10 20 50 100"
 
-__SPARK_MASTER="spark://${SPARK_MASTER_IP}:7077"
-__JAR="${HOME}/hierarchical-clustering-with-spark/target/scala-2.10/hierarchical-clustering_2.10-0.0.1.jar"
+__SPARK_MASTER="spark://10.252.37.109:7077"
+__JAR="/home/blade1/Documents/hierarchical-clustering-with-spark/target/scala-2.11/prayuga-streaming_2.11-0.1.jar"
+__ADDITIONAL_JAR="/home/blade1/Documents/hierarchical-clustering-with-spark/target/scala-2.11/spark-core_2.11-1.5.2.logging.jar"
 
 for __DATA_SIZE in $__DATA_SIZE_LIST
 do
@@ -26,6 +27,7 @@ do
           --master "$__SPARK_MASTER" \
           --class HierarchicalClusteringApp \
           --total-executor-cores $__MAX_CPU_CORES \
+          --jars $__ADDITIONAL_JAR \
           $__JAR "$__SPARK_MASTER" $__MAX_CPU_CORES $__DATA_SIZE $__DIMENSION $__NUM_CLUSTERS $__NUM_PARTITIONS
       done
     done
