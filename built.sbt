@@ -26,7 +26,7 @@ libraryDependencies ++= Seq(
   // "com.hadoop.gplcompression" % "hadoop-lzo" % "0.4.17",
   "mysql" % "mysql-connector-java" % "5.1.31",
   "com.datastax.spark" %% "spark-cassandra-connector" % "2.4.0",
-  "org.uncommons.maths" % "uncommons-maths" % "1.2.2"
+  "org.uncommons.maths" % "uncommons-maths" % "1.2.2a"
   // "com.datastax.spark" %% "spark-cassandra-connector-java" % "1.0.0-rc5"
 )
 
