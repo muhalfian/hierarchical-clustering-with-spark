@@ -11,8 +11,8 @@ __DIMENSION_LIST="2 5 10 20 50 100 200 1000 10000"
 __NUM_CLUSTERS_LIST="5 10 20 50 100"
 
 __SPARK_MASTER="spark://10.252.37.109:7077"
-__JAR="/home/blade1/Documents/hierarchical-clustering-with-spark/target/scala-2.11/prayuga-streaming_2.11-0.1.jar"
-__ADDITIONAL_JAR="/home/blade1/Documents/hierarchical-clustering-with-spark/src/main/resources/spark-core_2.11-1.5.2.logging.jar"
+__JAR="hdfs://blade1-node:9000/online_media/jars/prayuga-streaming_2.11-0.1.jar"
+__ADDITIONAL_JAR="hdfs://blade1-node:9000/online_media/jars/spark-core_2.11-1.5.2.logging.jar"
 
 for __DATA_SIZE in $__DATA_SIZE_LIST
 do
