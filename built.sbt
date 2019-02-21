@@ -8,7 +8,7 @@ version := "0.1"
 scalaVersion := "2.11.12"
 
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest_2.11" % "1.9.1" % "test",
+  "org.scalatest" %% "scalatest" % "2.2.6" % "test",
   "org.apache.spark" %% "spark-core" % "2.4.0" % "provided",
   "org.apache.spark" %% "spark-sql" % "2.4.0" % "provided",
   "org.apache.spark" %% "spark-hive" % "2.4.0" % "provided",
@@ -25,7 +25,7 @@ libraryDependencies ++= Seq(
   "com.twitter.elephantbird" % "elephant-bird-core" % "4.5",
   // "com.hadoop.gplcompression" % "hadoop-lzo" % "0.4.17",
   "mysql" % "mysql-connector-java" % "5.1.31",
-  "com.datastax.spark" %% "spark-cassandra-connector_2.11" % "2.4.0"
+  "com.datastax.spark" %% "spark-cassandra-connector" % "2.4.0"
   // "com.datastax.spark" %% "spark-cassandra-connector-java" % "1.0.0-rc5"
 )
 
