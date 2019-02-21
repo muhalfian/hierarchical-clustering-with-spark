@@ -18,7 +18,7 @@
 package org.apache.spark.mllib.clustering
 
 import breeze.linalg.{DenseVector => BDV, SparseVector => BSV, Vector => BV, norm => breezeNorm}
-// import org.apache.spark.Logging
+import org.apache.spark.internal.Logging
 import org.apache.spark.SparkContext._
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.rdd.RDD
@@ -94,7 +94,7 @@ class HierarchicalClustering(
   private[mllib] var epsilon: Double,
   private[mllib] var randomSeed: Int,
   private[mllib] var randomRange: Double)
-    extends Serializable with HierarchicalClusteringConf {
+    extends Serializable with Logging with HierarchicalClusteringConf {
 
   /**
    * Constructs with the default configuration
