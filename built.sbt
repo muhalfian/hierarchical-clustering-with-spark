@@ -9,11 +9,11 @@ scalaVersion := "2.11.12"
 
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "2.2.6" % "test",
-  "org.apache.spark" %% "spark-core" % "2.4.0" % "1.5.2",
-  "org.apache.spark" %% "spark-sql" % "2.4.0" % "1.5.2",
-  "org.apache.spark" %% "spark-hive" % "2.4.0" % "1.5.2",
-  "org.apache.spark" %% "spark-streaming" % "2.4.0" % "1.5.2",
-  "org.apache.spark" %% "spark-mllib" % "2.4.0" % "provided",
+  "org.apache.spark" %% "spark-core" % "1.5.2" % "provided",
+  "org.apache.spark" %% "spark-sql" % "1.5.2" % "provided",
+  "org.apache.spark" %% "spark-hive" % "1.5.2" % "provided",
+  "org.apache.spark" %% "spark-streaming" % "1.5.2" % "provided",
+  "org.apache.spark" %% "spark-mllib" % "1.5.2" % "provided",
   "org.apache.commons" % "commons-lang3" % "3.0",
   "org.eclipse.jetty" % "jetty-client" % "8.1.14.v20131031",
   "com.typesafe.play" % "play-json_2.10" % "2.2.1",
