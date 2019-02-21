@@ -1,21 +1,12 @@
 import sbt._
-import sbtassembly.Plugin.AssemblyKeys._
+import Keys._
 
-assemblySettings
+name := "Prayuga-Streaming"
 
-name := "hierarchical-clustering"
+version := "0.1"
 
-version := "0.0.1"
+scalaVersion := "2.11.12"
 
-scalaVersion := "2.10.4"
-
-// Can't parallelly execute in test
-parallelExecution in Test := false
-
-// protocol buffer support
-seq(sbtprotobuf.ProtobufPlugin.protobufSettings: _*)
-
-// additional libraries
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "1.9.1" % "test",
   "org.apache.spark" %% "spark-core" % "1.1.0" % "provided",
@@ -52,14 +43,10 @@ resolvers ++= Seq(
   "Mesosphere Public Repository" at "http://downloads.mesosphere.io/maven"
 )
 
-mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) => {
-  case m if m.toLowerCase.endsWith("manifest.mf") => MergeStrategy.discard
-  case m if m.startsWith("META-INF") => MergeStrategy.discard
-  case PathList("javax", "servlet", xs @ _ *) => MergeStrategy.first
-  case PathList("org", "apache", xs @ _ *) => MergeStrategy.first
-  case PathList("org", "jboss", xs @ _ *) => MergeStrategy.first
-  case "about.html" => MergeStrategy.rename
-  case "reference.conf" => MergeStrategy.concat
-  case _ => MergeStrategy.first
-}
+assemblyMergeStrategy in assembly := {
+  {
+    case "META-INF/services/org.apache.spark.sql.sources.DataSourceRegister" => MergeStrategy.concat
+    case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+    case x => MergeStrategy.first
+  }
 }
