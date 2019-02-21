@@ -122,7 +122,7 @@ class HierarchicalClustering(
   def run(data: RDD[Vector]): HierarchicalClusteringModel = {
     validateData(data)
     logInfo(s"Run with ${this}")
-    // println(s"Run with ${this}")
+    println(s"Run with ${this}")
 
     val startTime = System.currentTimeMillis() // to measure the execution time
     val clusterTree = ClusterTree.fromRDD(data) // make the root node
@@ -155,7 +155,7 @@ class HierarchicalClustering(
             // unpersist unnecessary cache because its children nodes are cached
             node.get.data.unpersist()
             logInfo(s"the number of cluster is ${model.clusterTree.getTreeSize()} at step ${step}")
-            // println(s"the number of cluster is ${model.clusterTree.getTreeSize()} at step ${step}")
+            println(s"the number of cluster is ${model.clusterTree.getTreeSize()} at step ${step}")
             isMerged = true
           }
         }
@@ -255,9 +255,9 @@ class HierarchicalClustering(
       logInfo(s"${numIter} iterations is finished" +
           s" for ${System.currentTimeMillis() - startTimeOfIter}" +
           s" at ${getClass}.split")
-      // println(s"${numIter} iterations is finished" +
-      //     s" for ${System.currentTimeMillis() - startTimeOfIter}" +
-      //     s" at ${getClass}.split")
+      println(s"${numIter} iterations is finished" +
+          s" for ${System.currentTimeMillis() - startTimeOfIter}" +
+          s" at ${getClass}.split")
     }
 
     val vectors = centers.map(center => Vectors.fromBreeze(center))
@@ -276,9 +276,9 @@ class HierarchicalClustering(
     logInfo(s"${this.getClass.getSimpleName}.split end" +
         s" with total iterations" +
         s" for ${System.currentTimeMillis() - startTime}")
-    // println(s"${this.getClass.getSimpleName}.split end" +
-    //     s" with total iterations" +
-    //     s" for ${System.currentTimeMillis() - startTime}")
+    println(s"${this.getClass.getSimpleName}.split end" +
+        s" with total iterations" +
+        s" for ${System.currentTimeMillis() - startTime}")
     nodes
   }
 }
