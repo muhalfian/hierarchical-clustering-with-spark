@@ -2,7 +2,7 @@
 
 ## ENV
 source ~/spark/conf/spark-env.sh
-SPARK_SUBMIT=${HOME}/spark/bin/spark-submit
+SPARK_SUBMIT=/usr/local/spark/bin/spark-submit
 
 ## paramters
 __MAX_CPU_CORES_LIST="1 2 4 8 16 32 64"
